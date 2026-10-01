@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glow Club ✨</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌸</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fff5f8;--card:#fff;--ink:#4a2c3b;--soft:#9a7388;--rose:#f27ca4;--rose2:#ffd1e1;--lilac:#d9c8f5;--gold:#d9a77a;--ok:#7bc9a6}
+*{box-sizing:border-box}
+body{margin:0;font-family:Quicksand,system-ui,sans-serif;background:linear-gradient(160deg,#fff5f8,#f6edff);color:var(--ink);min-height:100vh;padding-bottom:84px}
+h1,h2{font-family:'Playfair Display',Georgia,serif;margin:0}
+.wrap{max-width:560px;margin:0 auto;padding:18px 16px}
+.hero{text-align:center;padding:10px 0 4px}.hero h1{font-size:34px;color:var(--rose)}
+.sub{color:var(--soft);font-size:14px;margin:4px 0}
+.card{background:var(--card);border-radius:22px;padding:16px;margin:14px 0;box-shadow:0 6px 22px rgba(242,124,164,.14)}
+.card h2{font-size:19px;margin-bottom:10px}
+.opt{font-family:Quicksand;font-size:12px;color:var(--soft);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip,.btn{border:2px solid var(--rose2);background:#fff;color:var(--ink);border-radius:999px;padding:10px 14px;font:600 14px Quicksand;cursor:pointer}
+.chip.on{background:var(--rose);border-color:var(--rose);color:#fff}
+.btn{background:var(--rose2);border-color:var(--rose2)}.btn.gold{background:#fbe9d8;border-color:#fbe9d8}.btn.lil{background:var(--lilac);border-color:var(--lilac)}
+.big{font-size:38px;font-weight:700;color:var(--rose)}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.sp{justify-content:space-between}
+.bar{height:12px;background:#f6e4ec;border-radius:99px;overflow:hidden}.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--rose),var(--lilac));border-radius:99px}
+input[type=text],input[type=date],input[type=number]{border:2px solid var(--rose2);border-radius:14px;padding:10px 12px;font:600 14px Quicksand;color:var(--ink);width:100%;background:#fff}
+.note{background:#fff5f8;border-radius:12px;padding:8px 10px;margin-top:6px;font-size:14px}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fffffff2;display:flex;justify-content:space-around;padding:8px 6px calc(8px + env(safe-area-inset-bottom,0px));box-shadow:0 -4px 18px rgba(242,124,164,.15);backdrop-filter:blur(8px)}
+nav button{border:0;background:none;font:700 12px Quicksand;color:var(--soft);padding:6px 10px;border-radius:14px;cursor:pointer}
+nav button.on{background:var(--rose2);color:var(--rose)}nav span{display:block;font-size:20px}
+.av{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font:700 18px 'Playfair Display';color:#fff;flex:none}
+.badge{background:#fbe9d8;color:var(--gold);border-radius:99px;padding:3px 10px;font-size:12px;font-weight:700}
+.ring{position:relative;width:64px;height:64px;flex:none}.ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:14px}
+.cheer button{border:0;background:#fff5f8;border-radius:99px;padding:6px 10px;font-size:15px;cursor:pointer}
+.banner{background:#fff0c9;border-radius:16px;padding:12px;font-size:14px;margin:14px 0}
+.who{display:grid;grid-template-columns:1fr 1fr;gap:10px}.who button{padding:18px;font-size:17px;border-radius:20px}
+.who button:last-child:nth-child(odd){grid-column:1/-1}
+</style></head><body>
+<div class="wrap" id="app"></div>
+<nav id="nav"></nav>
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getFirestore,collection,doc,setDoc,onSnapshot,arrayUnion} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// ====== 1) PASTE YOUR FIREBASE CONFIG HERE (see setup steps) ======
+const CONFIG={apiKey:"AIzaSyD0JIWYQqY9jGtFHLI8F1XEKFzgRD8_OCE",authDomain:"glow-club-a51bc.firebaseapp.com",projectId:"glow-club-a51bc",storageBucket:"glow-club-a51bc.firebasestorage.app",messagingSenderId:"1050105352777",appId:"1:1050105352777:web:f748d29a016978f506e598"};
+// ==================================================================
+const NAMES=["Dhanya","Navya","Rochana","Medha","Namitha"];
+const HUES=["#f27ca4","#b79bea","#f5a98c","#7fc4c0","#e58fd0"];
+const START="2026-10-01",END="2026-12-31",CHEATS=7;
+const MIND=[["selftalk","💭 No negative self-talk"],["grat","📓 Gratitude journal"],["social","📵 Limited social media"],["hobby","🎨 Time for a hobby"],["sleep","😴 Good sleep schedule"]];
+const CHEERS=["💗","🔥","👏","🌸"];
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ds=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const pd=s=>new Date(s+"T12:00:00");
+const clamp=s=>s<START?START:s>END?END:s;
+const today=clamp(ds(new Date()));
+let me=localStorage.getItem("gc_me"),tab="my",myDate=today,teamDate=today;
+let days={},profs={},db=null,ready=false;
+
+if(!CONFIG.projectId){
+  $("#app").innerHTML='<div class="hero"><h1>Glow Club 🌸</h1></div><div class="banner">Almost there! Open <b>index.html</b> in a text editor and paste your Firebase config where it says <b>PASTE YOUR FIREBASE CONFIG HERE</b>.</div>';
+}else{
+  db=getFirestore(initializeApp(CONFIG));
+  onSnapshot(collection(db,"days"),s=>{days={};s.forEach(d=>days[d.id]=d.data());ready=true;render()},e=>{$("#app").innerHTML='<div class="banner">Could not connect to the database: '+esc(e.message)+'</div>'});
+  onSnapshot(collection(db,"profiles"),s=>{profs={};s.forEach(d=>profs[d.id]=d.data());render()});
+}
+const id=(n,d)=>n+"_"+d;
+const get=(n,d)=>days[id(n,d)]||{};
+const tgt=n=>({mins:Math.max(10,+(profs[n]?.mins)||10),water:+(profs[n]?.water)||2500,habits:profs[n]?.habits||[]});
+function items(n,d){const x=get(n,d),t=tgt(n),m=x.meals||{};
+  return [x.mins>=t.mins,m.b,m.l,m.d,x.veg,x.water>=t.water,x.sugar||x.cheat>0,x.nobinge].map(Boolean)}
+const pct=(n,d)=>Math.round(items(n,d).filter(Boolean).length/8*100);
+const cheatsUsed=n=>Object.values(days).filter(x=>x.who===n).reduce((a,x)=>a+(x.cheat||0),0);
+const weekDates=d=>{const x=pd(d),off=(x.getDay()+6)%7;x.setDate(x.getDate()-off);return[...Array(7)].map((_,i)=>{const y=new Date(x);y.setDate(x.getDate()+i);return ds(y)})};
+const weekMins=(n,d)=>weekDates(d).reduce((a,k)=>a+(get(n,k).mins||0),0);
+const nice=d=>pd(d).toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"});
+
+async function save(n,d,patch){await setDoc(doc(db,"days",id(n,d)),{who:n,date:d,...patch},{merge:true})}
+const nest=(k,v)=>k.split(".").reduceRight((a,p)=>({[p]:a}),v);
+
+const ring=p=>`<div class="ring"><svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="27" fill="none" stroke="#f6e4ec" stroke-width="7"/><circle cx="32" cy="32" r="27" fill="none" stroke="${p>=100?'#7bc9a6':'#f27ca4'}" stroke-width="7" stroke-linecap="round" stroke-dasharray="${1.696*p} 170" transform="rotate(-90 32 32)"/></svg><b>${p>=100?'✨':p+'%'}</b></div>`;
+const av=n=>`<div class="av" style="background:${HUES[NAMES.indexOf(n)]}">${n[0]}</div>`;
+const tog=(k,label,on)=>`<button class="chip ${on?'on':''}" data-a="tog" data-k="${k}">${label}</button>`;
+
+function head(){const dn=Math.floor((pd(today)-pd(START))/864e5)+1;
+  return `<div class="hero"><h1>Glow Club 🌸</h1><p class="sub">Day ${dn} of 92 · Oct 1 – Dec 31 · ${nice(today)}</p></div>`}
+
+function vMy(){
+  const d=myDate,x=get(me,d),t=tgt(me),m=x.meals||{},p=pct(me,d),ch=cheatsUsed(me);
+  const msg=p>=100?"You did it today! Proud of you 💖":x.mins>0||p>0?"Keep glowing, you're doing great ✨":"A fresh day, be kind to yourself 🌷";
+  return `<div class="row sp"><div class="row">${av(me)}<div><b>Hi ${me}!</b><div class="sub">${msg}</div></div></div><button class="btn" data-a="who">Switch</button></div>
+  <div class="card"><div class="row sp"><input type="date" id="myd" value="${d}" min="${START}" max="${END}" style="width:auto"><div class="row">${ring(p)}</div></div></div>
+  <div class="card"><h2>🏃‍♀️ Move</h2><div class="row sp"><div><span class="big">${x.mins||0}</span> min <div class="sub">goal ${t.mins}+ · any workout counts!</div></div></div>
+  <div class="bar" style="margin:10px 0"><i style="width:${Math.min(100,(x.mins||0)/t.mins*100)}%"></i></div>
+  <div class="chips">${[10,15,30,45].map(v=>`<button class="btn" data-a="mins" data-v="${v}">+${v}</button>`).join("")}<button class="btn lil" data-a="mins" data-v="-10">−10</button></div>
+  ${!x.mins?'<div class="sub" style="margin-top:8px">Rest day? Go for an active one: a light walk or stretch counts 🌿</div>':""}</div>
+  <div class="card"><h2>🥗 Eat</h2><div class="chips">
+  ${tog("meals.b","🍳 Breakfast",m.b)}${tog("meals.l","🍱 Lunch",m.l)}${tog("meals.d","🍽️ Dinner",m.d)}
+  ${tog("veg","🥦 Veggies/fruit",x.veg)}${tog("sugar","🍬 Low sugar & processed",x.sugar)}${tog("nobinge","🧘 No mindless/binge eating",x.nobinge)}${tog("ontime","⏰ Ate at my usual times (optional)",x.ontime)}</div></div>
+  <div class="card"><h2>💧 Water</h2><span class="big">${((x.water||0)/1000).toFixed(2).replace(/\.?0+$/,"")}</span> L <span class="sub">of ${t.water/1000} L</span>
+  <div class="bar" style="margin:10px 0"><i style="width:${Math.min(100,(x.water||0)/t.water*100)}%"></i></div>
+  <div class="chips"><button class="btn" data-a="water" data-v="250">+ glass (250ml)</button><button class="btn" data-a="water" data-v="500">+ bottle (500ml)</button><button class="btn lil" data-a="water" data-v="-250">−</button></div></div>
+  <div class="card"><h2>💌 Proof <span class="opt">send a message after workouts & meals</span></h2>
+  <div class="row"><input type="text" id="nt" placeholder="e.g. Yoga 30 min, felt amazing!" maxlength="140"><button class="btn" data-a="note">Add</button></div>
+  ${(x.notes||[]).map(n=>`<div class="note">${esc(n)}</div>`).join("")}</div>
+  <div class="card"><h2>🍰 Cheat meal</h2><div class="row sp"><div><b>${ch}</b> / ${CHEATS} used · ${CHEATS-ch} left<div class="sub">Today: ${x.cheat||0} cheat meal${x.cheat==1?"":"s"}</div></div>
+  <div class="chips"><button class="btn gold" data-a="cheat" data-v="1" ${ch>=CHEATS?"disabled":""}>I'm taking one 🍰</button>${x.cheat?'<button class="btn" data-a="cheat" data-v="-1">undo</button>':""}</div></div></div>
+  <div class="card"><h2>🌙 Mind <span class="opt">optional · doesn't affect your score</span></h2><div class="chips">
+  ${MIND.map(([k,l])=>tog("mind."+k,l,x.mind?.[k])).join("")}
+  ${t.habits.map((h,i)=>tog("mind.h"+i,"⭐ "+esc(h),x.mind?.["h"+i])).join("")}</div></div>`;
+}
+
+function vTeam(){
+  const d=teamDate;
+  return `<div class="card"><div class="row sp"><h2 style="margin:0">Team dashboard</h2><input type="date" id="td" value="${d}" min="${START}" max="${END}" style="width:auto"></div><div class="sub">Showing ${nice(d)}</div></div>`+
+  NAMES.map(n=>{const x=get(n,d),m=x.meals||{},t=tgt(n),cs=x.cheers||{};
+    return `<div class="card"><div class="row">${av(n)}<div style="flex:1"><b>${n}</b> ${x.cheat?'<span class="badge">🍰 cheat meal</span>':""}
+    <div class="sub">🏃 ${x.mins||0} min · 💧 ${((x.water||0)/1000).toFixed(1)}/${t.water/1000} L · 🍽️ ${[m.b,m.l,m.d].filter(Boolean).length}/3 meals</div></div>${ring(pct(n,d))}</div>
+    ${(x.notes||[]).slice(-3).map(z=>`<div class="note">${esc(z)}</div>`).join("")}
+    <div class="row cheer" style="margin-top:10px">${CHEERS.map(e=>`<button data-a="cheer" data-n="${n}" data-e="${e}" style="${cs[me]==e?'background:#ffd1e1':''}">${e}</button>`).join("")}
+    <span class="sub">${Object.entries(cs).map(([w,e])=>e+" "+w).join(" · ")}</span></div></div>`}).join("");
+}
+
+function vWeek(){
+  const wd=weekDates(teamDate),tot=NAMES.reduce((a,n)=>a+weekMins(n,teamDate),0);
+  return `<div class="card"><h2>This week ${nice(wd[0])} – ${nice(wd[6])}</h2><div class="sub">Group total: <b>${tot}</b> min · target ${150*5}</div>
+  <div class="bar" style="margin-top:8px"><i style="width:${Math.min(100,tot/750*100)}%"></i></div>
+  <div class="chips" style="margin-top:10px"><button class="btn" data-a="wk" data-v="-7">← prev</button><button class="btn" data-a="wk" data-v="7">next →</button></div></div>`+
+  NAMES.map(n=>{const w=weekMins(n,teamDate),full=wd.filter(k=>k<=END&&pct(n,k)>=100).length,rest=wd.filter(k=>k<=today&&!get(n,k).mins).length;
+    return `<div class="card"><div class="row">${av(n)}<div style="flex:1"><b>${n}</b><div class="sub">${w>=150?"Weekly goal reached 🎉":(150-w)+" min to go"} · ${full} perfect day${full==1?"":"s"}</div></div><b>${w}/150</b></div>
+    <div class="bar" style="margin-top:8px"><i style="width:${Math.min(100,w/150*100)}%"></i></div>
+    <div class="sub" style="margin-top:6px">🍰 cheat meals: ${cheatsUsed(n)}/${CHEATS}${rest?` · ${rest} day${rest>1?"s":""} with no movement`:""}</div></div>`}).join("");
+}
+
+function vSet(){const t=tgt(me);
+  return `<div class="card"><h2>My settings</h2><p class="sub">The group rules stay the same for everyone. Here you can set your own goals a little higher.</p>
+  <label class="sub">Daily workout minutes (10 or more)</label><input type="number" id="s1" min="10" max="240" value="${t.mins}" style="margin:6px 0 12px">
+  <label class="sub">Daily water (ml)</label><input type="number" id="s2" min="2500" step="250" value="${t.water}" style="margin:6px 0 12px">
+  <label class="sub">My own extra habits (up to 3, shown under Mind)</label>
+  ${[0,1,2].map(i=>`<input type="text" class="h" maxlength="30" value="${esc(t.habits[i]||"")}" placeholder="e.g. 10 min stretching" style="margin:6px 0">`).join("")}
+  <div class="chips" style="margin-top:12px"><button class="btn" data-a="saveset">Save ✨</button><button class="btn lil" data-a="who">Switch person</button></div></div>
+  <div class="card"><h2>📜 Our rules</h2><div class="sub" style="line-height:1.7">🏃 10+ min daily · 150+ min weekly · active rest days<br>🥗 3 balanced meals · never skip · veggies/fruit · 2.5 L water · less sugar & processed · no binge · regular timings<br>💌 Share a pic or message after every workout & meal<br>🍰 ${CHEATS} cheat meals in 3 months. Say when you take one!<br>🌙 Optional: kind self-talk, gratitude, less scrolling, hobbies, sleep</div></div>`;
+}
+
+function render(){
+  if(!db)return;
+  const a=$("#app"),keep=document.activeElement?.id;
+  if(!me){$("#nav").innerHTML="";a.innerHTML=head()+`<div class="card"><h2>Who are you? 💕</h2><div class="who">${NAMES.map(n=>`<button class="btn" data-a="pick" data-n="${n}">${n}</button>`).join("")}</div></div>`;return}
+  if(!ready){a.innerHTML=head()+'<p class="sub" style="text-align:center">Loading…</p>';return}
+  const v={my:vMy,team:vTeam,week:vWeek,set:vSet}[tab]();
+  if(keep&&["nt","s1","s2"].includes(keep)&&document.activeElement.value)return; // don't wipe typing
+  a.innerHTML=head()+v;
+  $("#nav").innerHTML=[["my","🌸","My day"],["team","👯","Team"],["week","📈","Week"],["set","⚙️","Me"]].map(([k,i,l])=>`<button class="${tab==k?'on':''}" data-a="tab" data-k="${k}"><span>${i}</span>${l}</button>`).join("");
+}
+
+document.addEventListener("click",async e=>{
+  const b=e.target.closest("[data-a]");if(!b)return;const a=b.dataset.a,x=get(me,myDate);
+  try{
+  if(a=="pick"){me=b.dataset.n;localStorage.setItem("gc_me",me);tab="my";render()}
+  else if(a=="who"){me=null;localStorage.removeItem("gc_me");render()}
+  else if(a=="tab"){tab=b.dataset.k;render()}
+  else if(a=="tog"){const k=b.dataset.k,cur=k.split(".").reduce((o,p)=>o?.[p],x);await save(me,myDate,nest(k,!cur))}
+  else if(a=="mins")await save(me,myDate,{mins:Math.max(0,(x.mins||0)+ +b.dataset.v)});
+  else if(a=="water")await save(me,myDate,{water:Math.max(0,(x.water||0)+ +b.dataset.v)});
+  else if(a=="cheat"){const v=+b.dataset.v;if(v>0&&cheatsUsed(me)>=CHEATS)return;await save(me,myDate,{cheat:Math.max(0,(x.cheat||0)+v)})}
+  else if(a=="note"){const i=$("#nt"),t=i.value.trim();if(!t)return;i.value="";await setDoc(doc(db,"days",id(me,myDate)),{who:me,date:myDate,notes:arrayUnion(new Date().toLocaleTimeString("en-IN",{hour:"numeric",minute:"2-digit"})+" · "+t)},{merge:true})}
+  else if(a=="cheer"){const n=b.dataset.n;await save(n,teamDate,{cheers:{[me]:b.dataset.e}})}
+  else if(a=="wk"){const d=pd(teamDate);d.setDate(d.getDate()+ +b.dataset.v);teamDate=clamp(ds(d));render()}
+  else if(a=="saveset"){await setDoc(doc(db,"profiles",me),{mins:Math.max(10,+$("#s1").value||10),water:Math.max(2500,+$("#s2").value||2500),habits:[...document.querySelectorAll(".h")].map(i=>i.value.trim()).filter(Boolean)});tab="my";render()}
+  }catch(err){alert("Couldn't save: "+err.message)}
+});
+document.addEventListener("change",e=>{
+  if(e.target.id=="myd"){myDate=clamp(e.target.value||today);render()}
+  if(e.target.id=="td"){teamDate=clamp(e.target.value||today);render()}
+});
+render();
+</script></body></html>
