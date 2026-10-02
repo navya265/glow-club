@@ -32,7 +32,7 @@ nav button.on{background:var(--rose2);color:var(--rose)}nav span{display:block;f
 .ring{position:relative;width:64px;height:64px;flex:none}.ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:14px}
 .cheer button{border:0;background:#fff5f8;border-radius:99px;padding:6px 10px;font-size:15px;cursor:pointer}
 .banner{background:#fff0c9;border-radius:16px;padding:12px;font-size:14px;margin:14px 0}
-.ph{position:relative;display:inline-block;margin:6px 6px 0 0}.ph img{width:88px;height:88px;object-fit:cover;border-radius:14px;cursor:pointer;display:block}.ph button{position:absolute;top:-6px;right:-6px;border:0;background:#fff;border-radius:50%;width:22px;height:22px;box-shadow:0 1px 4px #0003;cursor:pointer}.lb{position:fixed;inset:0;background:#000d;display:grid;place-items:center;z-index:9;padding:16px}.lb img{max-width:100%;max-height:100%;border-radius:12px}
+.ph{position:relative;display:inline-block;margin:6px 6px 0 0}.ph img{width:88px;height:88px;object-fit:cover;border-radius:14px;cursor:pointer;display:block}.ph button{position:absolute;top:-6px;right:-6px;border:0;background:#fff;border-radius:50%;width:22px;height:22px;box-shadow:0 1px 4px #0003;cursor:pointer}.ph i{position:absolute;left:6px;bottom:6px;background:#7bc9a6;color:#fff;border-radius:99px;font:700 11px Quicksand;padding:2px 7px;font-style:normal}.pv{background:#fff5f8;border-radius:16px;padding:10px;margin-top:10px}.pv img{width:100%;max-height:260px;object-fit:cover;border-radius:12px;display:block;margin-bottom:8px}.lb{position:fixed;inset:0;background:#000d;display:grid;place-items:center;z-index:9;padding:16px}.lb img{max-width:100%;max-height:100%;border-radius:12px}
 .who{display:grid;grid-template-columns:1fr 1fr;gap:10px}.who button{padding:18px;font-size:17px;border-radius:20px}
 .who button:last-child:nth-child(odd){grid-column:1/-1}
 </style></head><body>
@@ -57,7 +57,7 @@ const pd=s=>new Date(s+"T12:00:00");
 const clamp=s=>s<START?START:s>END?END:s;
 const today=clamp(ds(new Date()));
 let me=localStorage.getItem("gc_me"),tab="my",myDate=today,teamDate=today;
-let days={},profs={},db=null,ready=false;
+let pend=null;let days={},profs={},db=null,ready=false;
 
 if(!CONFIG.projectId){
   $("#app").innerHTML='<div class="hero"><h1>Glow Club 🌸</h1></div><div class="banner">Almost there! Open <b>index.html</b> in a text editor and paste your Firebase config where it says <b>PASTE YOUR FIREBASE CONFIG HERE</b>.</div>';
@@ -68,7 +68,7 @@ if(!CONFIG.projectId){
 }
 const phs={},phSub={};
 function ensurePhotos(d){if(phSub[d])return;phSub[d]=onSnapshot(query(collection(db,"photos"),where("date","==",d)),s=>{phs[d]=s.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>(a.ts||0)-(b.ts||0));render()})}
-const phHtml=(n,d,own)=>(phs[d]||[]).filter(p=>p.who===n).map(p=>`<span class="ph"><img src="${p.img}" data-a="zoom">${own?`<button data-a="delph" data-i="${p.id}">✕</button>`:""}</span>`).join("");
+const phHtml=(n,d,own)=>(phs[d]||[]).filter(p=>p.who===n).map(p=>`<span class="ph"><img src="${p.img}" data-a="zoom">${own?`<i>✓ saved</i><button data-a="delph" data-i="${p.id}" title="Delete photo">🗑</button>`:""}</span>`).join("");
 function shrink(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const r=Math.min(1,900/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=im.width*r;c.height=im.height*r;c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL("image/jpeg",.65))};im.onerror=no;im.src=u})}
 const id=(n,d)=>n+"_"+d;
 const get=(n,d)=>days[id(n,d)]||{};
@@ -108,8 +108,9 @@ function vMy(){
   <div class="chips"><button class="btn" data-a="water" data-v="250">+ glass (250ml)</button><button class="btn" data-a="water" data-v="500">+ bottle (500ml)</button><button class="btn lil" data-a="water" data-v="-250">−</button></div></div>
   <div class="card"><h2>💌 Proof <span class="opt">send a message after workouts & meals</span></h2>
   <div class="row"><input type="text" id="nt" placeholder="e.g. Yoga 30 min, felt amazing!" maxlength="140"><button class="btn" data-a="note">Add</button></div>
-  <div style="margin-top:8px"><label class="btn" style="cursor:pointer;display:inline-block">📷 Add photo<input type="file" id="ph" accept="image/*" hidden></label></div>
-  <div>${phHtml(me,d,true)}</div>
+  <div style="margin-top:8px"><label class="btn" style="cursor:pointer;display:inline-block">📷 Choose photo<input type="file" id="ph" accept="image/*" hidden></label></div>
+  ${pend&&pend.date===d?`<div class="pv"><img src="${pend.img}"><div class="sub" style="margin-bottom:8px">Not saved yet. Tap Save to share it with the group.</div><div class="chips"><button class="btn" style="background:var(--rose);border-color:var(--rose);color:#fff" data-a="savph">Save photo ✅</button><button class="btn lil" data-a="cancph">Cancel</button></div></div>`:""}
+  <div class="sub" style="margin-top:8px">${(phs[d]||[]).some(p=>p.who===me)?"Your saved photos:":""}</div><div>${phHtml(me,d,true)}</div>
   ${(x.notes||[]).map(n=>`<div class="note">${esc(n)}</div>`).join("")}</div>
   <div class="card"><h2>🍰 Cheat meal</h2><div class="row sp"><div><b>${ch}</b> / ${CHEATS} used · ${CHEATS-ch} left<div class="sub">Today: ${x.cheat||0} cheat meal${x.cheat==1?"":"s"}</div></div>
   <div class="chips"><button class="btn gold" data-a="cheat" data-v="1" ${ch>=CHEATS?"disabled":""}>I'm taking one 🍰</button>${x.cheat?'<button class="btn" data-a="cheat" data-v="-1">undo</button>':""}</div></div></div>
@@ -167,6 +168,8 @@ document.addEventListener("click",async e=>{
   try{
   if(a=="pick"){me=b.dataset.n;localStorage.setItem("gc_me",me);tab="my";render()}
   else if(a=="zoom"){const l=document.createElement("div");l.className="lb";l.innerHTML='<img src="'+b.src+'">';l.onclick=()=>l.remove();document.body.appendChild(l)}
+  else if(a=="savph"){b.disabled=true;b.textContent="Saving…";await addDoc(collection(db,"photos"),{who:me,date:pend.date,img:pend.img,ts:Date.now()});pend=null;render()}
+  else if(a=="cancph"){pend=null;render()}
   else if(a=="delph"){if(confirm("Delete this photo?"))await deleteDoc(doc(db,"photos",b.dataset.i))}
   else if(a=="who"){me=null;localStorage.removeItem("gc_me");render()}
   else if(a=="tab"){tab=b.dataset.k;render()}
@@ -182,7 +185,7 @@ document.addEventListener("click",async e=>{
 });
 document.addEventListener("change",async e=>{
   if(e.target.id=="ph"){const f=e.target.files[0];e.target.value="";if(!f)return;
-    try{const img=await shrink(f);await addDoc(collection(db,"photos"),{who:me,date:myDate,img,ts:Date.now()})}catch(err){alert("Couldn't save photo: "+err.message)}}
+    try{pend={img:await shrink(f),date:myDate};render()}catch(err){alert("Couldn't read that photo: "+err.message)}}
   if(e.target.id=="myd"){myDate=clamp(e.target.value||today);render()}
   if(e.target.id=="td"){teamDate=clamp(e.target.value||today);render()}
 });
