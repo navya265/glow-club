@@ -32,6 +32,7 @@ nav button.on{background:var(--rose2);color:var(--rose)}nav span{display:block;f
 .ring{position:relative;width:64px;height:64px;flex:none}.ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:14px}
 .cheer button{border:0;background:#fff5f8;border-radius:99px;padding:6px 10px;font-size:15px;cursor:pointer}
 .banner{background:#fff0c9;border-radius:16px;padding:12px;font-size:14px;margin:14px 0}
+.ph{position:relative;display:inline-block;margin:6px 6px 0 0}.ph img{width:88px;height:88px;object-fit:cover;border-radius:14px;cursor:pointer;display:block}.ph button{position:absolute;top:-6px;right:-6px;border:0;background:#fff;border-radius:50%;width:22px;height:22px;box-shadow:0 1px 4px #0003;cursor:pointer}.lb{position:fixed;inset:0;background:#000d;display:grid;place-items:center;z-index:9;padding:16px}.lb img{max-width:100%;max-height:100%;border-radius:12px}
 .who{display:grid;grid-template-columns:1fr 1fr;gap:10px}.who button{padding:18px;font-size:17px;border-radius:20px}
 .who button:last-child:nth-child(odd){grid-column:1/-1}
 </style></head><body>
@@ -39,13 +40,13 @@ nav button.on{background:var(--rose2);color:var(--rose)}nav span{display:block;f
 <nav id="nav"></nav>
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {getFirestore,collection,doc,setDoc,onSnapshot,arrayUnion} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {getFirestore,collection,doc,setDoc,onSnapshot,arrayUnion,addDoc,deleteDoc,query,where} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ====== 1) PASTE YOUR FIREBASE CONFIG HERE (see setup steps) ======
 const CONFIG={apiKey:"AIzaSyD0JIWYQqY9jGtFHLI8F1XEKFzgRD8_OCE",authDomain:"glow-club-a51bc.firebaseapp.com",projectId:"glow-club-a51bc",storageBucket:"glow-club-a51bc.firebasestorage.app",messagingSenderId:"1050105352777",appId:"1:1050105352777:web:f748d29a016978f506e598"};
 // ==================================================================
 const NAMES=["Dhanya","Navya","Rochana","Medha","Namitha"];
-const HUES=["#f27ca4","#b79bea","#f5a98c","#7fc4c0","#e58fd0"];
+const HUES=["#8e44c9","#800020","#3b82d6","#f27ca4","#b9a3ec"]; // Dhanya purple, Navya maroon, Rochana blue, Medha pink, Namitha lavender
 const START="2026-10-01",END="2026-12-31",CHEATS=7;
 const MIND=[["selftalk","💭 No negative self-talk"],["grat","📓 Gratitude journal"],["social","📵 Limited social media"],["hobby","🎨 Time for a hobby"],["sleep","😴 Good sleep schedule"]];
 const CHEERS=["💗","🔥","👏","🌸"];
@@ -65,6 +66,10 @@ if(!CONFIG.projectId){
   onSnapshot(collection(db,"days"),s=>{days={};s.forEach(d=>days[d.id]=d.data());ready=true;render()},e=>{$("#app").innerHTML='<div class="banner">Could not connect to the database: '+esc(e.message)+'</div>'});
   onSnapshot(collection(db,"profiles"),s=>{profs={};s.forEach(d=>profs[d.id]=d.data());render()});
 }
+const phs={},phSub={};
+function ensurePhotos(d){if(phSub[d])return;phSub[d]=onSnapshot(query(collection(db,"photos"),where("date","==",d)),s=>{phs[d]=s.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>(a.ts||0)-(b.ts||0));render()})}
+const phHtml=(n,d,own)=>(phs[d]||[]).filter(p=>p.who===n).map(p=>`<span class="ph"><img src="${p.img}" data-a="zoom">${own?`<button data-a="delph" data-i="${p.id}">✕</button>`:""}</span>`).join("");
+function shrink(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const r=Math.min(1,900/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=im.width*r;c.height=im.height*r;c.getContext("2d").drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c.toDataURL("image/jpeg",.65))};im.onerror=no;im.src=u})}
 const id=(n,d)=>n+"_"+d;
 const get=(n,d)=>days[id(n,d)]||{};
 const tgt=n=>({mins:Math.max(10,+(profs[n]?.mins)||10),water:+(profs[n]?.water)||2500,habits:profs[n]?.habits||[]});
@@ -93,7 +98,7 @@ function vMy(){
   <div class="card"><div class="row sp"><input type="date" id="myd" value="${d}" min="${START}" max="${END}" style="width:auto"><div class="row">${ring(p)}</div></div></div>
   <div class="card"><h2>🏃‍♀️ Move</h2><div class="row sp"><div><span class="big">${x.mins||0}</span> min <div class="sub">goal ${t.mins}+ · any workout counts!</div></div></div>
   <div class="bar" style="margin:10px 0"><i style="width:${Math.min(100,(x.mins||0)/t.mins*100)}%"></i></div>
-  <div class="chips">${[10,15,30,45].map(v=>`<button class="btn" data-a="mins" data-v="${v}">+${v}</button>`).join("")}<button class="btn lil" data-a="mins" data-v="-10">−10</button></div>
+  <div class="chips">${[5,10,15,30,45].map(v=>`<button class="btn" data-a="mins" data-v="${v}">+${v}</button>`).join("")}<button class="btn lil" data-a="mins" data-v="-10">−10</button></div>
   ${!x.mins?'<div class="sub" style="margin-top:8px">Rest day? Go for an active one: a light walk or stretch counts 🌿</div>':""}</div>
   <div class="card"><h2>🥗 Eat</h2><div class="chips">
   ${tog("meals.b","🍳 Breakfast",m.b)}${tog("meals.l","🍱 Lunch",m.l)}${tog("meals.d","🍽️ Dinner",m.d)}
@@ -103,6 +108,8 @@ function vMy(){
   <div class="chips"><button class="btn" data-a="water" data-v="250">+ glass (250ml)</button><button class="btn" data-a="water" data-v="500">+ bottle (500ml)</button><button class="btn lil" data-a="water" data-v="-250">−</button></div></div>
   <div class="card"><h2>💌 Proof <span class="opt">send a message after workouts & meals</span></h2>
   <div class="row"><input type="text" id="nt" placeholder="e.g. Yoga 30 min, felt amazing!" maxlength="140"><button class="btn" data-a="note">Add</button></div>
+  <div style="margin-top:8px"><label class="btn" style="cursor:pointer;display:inline-block">📷 Add photo<input type="file" id="ph" accept="image/*" hidden></label></div>
+  <div>${phHtml(me,d,true)}</div>
   ${(x.notes||[]).map(n=>`<div class="note">${esc(n)}</div>`).join("")}</div>
   <div class="card"><h2>🍰 Cheat meal</h2><div class="row sp"><div><b>${ch}</b> / ${CHEATS} used · ${CHEATS-ch} left<div class="sub">Today: ${x.cheat||0} cheat meal${x.cheat==1?"":"s"}</div></div>
   <div class="chips"><button class="btn gold" data-a="cheat" data-v="1" ${ch>=CHEATS?"disabled":""}>I'm taking one 🍰</button>${x.cheat?'<button class="btn" data-a="cheat" data-v="-1">undo</button>':""}</div></div></div>
@@ -117,7 +124,7 @@ function vTeam(){
   NAMES.map(n=>{const x=get(n,d),m=x.meals||{},t=tgt(n),cs=x.cheers||{};
     return `<div class="card"><div class="row">${av(n)}<div style="flex:1"><b>${n}</b> ${x.cheat?'<span class="badge">🍰 cheat meal</span>':""}
     <div class="sub">🏃 ${x.mins||0} min · 💧 ${((x.water||0)/1000).toFixed(1)}/${t.water/1000} L · 🍽️ ${[m.b,m.l,m.d].filter(Boolean).length}/3 meals</div></div>${ring(pct(n,d))}</div>
-    ${(x.notes||[]).slice(-3).map(z=>`<div class="note">${esc(z)}</div>`).join("")}
+    <div>${phHtml(n,d,false)}</div>${(x.notes||[]).slice(-3).map(z=>`<div class="note">${esc(z)}</div>`).join("")}
     <div class="row cheer" style="margin-top:10px">${CHEERS.map(e=>`<button data-a="cheer" data-n="${n}" data-e="${e}" style="${cs[me]==e?'background:#ffd1e1':''}">${e}</button>`).join("")}
     <span class="sub">${Object.entries(cs).map(([w,e])=>e+" "+w).join(" · ")}</span></div></div>`}).join("");
 }
@@ -145,6 +152,7 @@ function vSet(){const t=tgt(me);
 
 function render(){
   if(!db)return;
+  if(me){ensurePhotos(myDate);ensurePhotos(teamDate)}
   const a=$("#app"),keep=document.activeElement?.id;
   if(!me){$("#nav").innerHTML="";a.innerHTML=head()+`<div class="card"><h2>Who are you? 💕</h2><div class="who">${NAMES.map(n=>`<button class="btn" data-a="pick" data-n="${n}">${n}</button>`).join("")}</div></div>`;return}
   if(!ready){a.innerHTML=head()+'<p class="sub" style="text-align:center">Loading…</p>';return}
@@ -158,6 +166,8 @@ document.addEventListener("click",async e=>{
   const b=e.target.closest("[data-a]");if(!b)return;const a=b.dataset.a,x=get(me,myDate);
   try{
   if(a=="pick"){me=b.dataset.n;localStorage.setItem("gc_me",me);tab="my";render()}
+  else if(a=="zoom"){const l=document.createElement("div");l.className="lb";l.innerHTML='<img src="'+b.src+'">';l.onclick=()=>l.remove();document.body.appendChild(l)}
+  else if(a=="delph"){if(confirm("Delete this photo?"))await deleteDoc(doc(db,"photos",b.dataset.i))}
   else if(a=="who"){me=null;localStorage.removeItem("gc_me");render()}
   else if(a=="tab"){tab=b.dataset.k;render()}
   else if(a=="tog"){const k=b.dataset.k,cur=k.split(".").reduce((o,p)=>o?.[p],x);await save(me,myDate,nest(k,!cur))}
@@ -170,7 +180,9 @@ document.addEventListener("click",async e=>{
   else if(a=="saveset"){await setDoc(doc(db,"profiles",me),{mins:Math.max(10,+$("#s1").value||10),water:Math.max(2500,+$("#s2").value||2500),habits:[...document.querySelectorAll(".h")].map(i=>i.value.trim()).filter(Boolean)});tab="my";render()}
   }catch(err){alert("Couldn't save: "+err.message)}
 });
-document.addEventListener("change",e=>{
+document.addEventListener("change",async e=>{
+  if(e.target.id=="ph"){const f=e.target.files[0];e.target.value="";if(!f)return;
+    try{const img=await shrink(f);await addDoc(collection(db,"photos"),{who:me,date:myDate,img,ts:Date.now()})}catch(err){alert("Couldn't save photo: "+err.message)}}
   if(e.target.id=="myd"){myDate=clamp(e.target.value||today);render()}
   if(e.target.id=="td"){teamDate=clamp(e.target.value||today);render()}
 });
