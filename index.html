@@ -57,7 +57,7 @@ const pd=s=>new Date(s+"T12:00:00");
 const clamp=s=>s<START?START:s>END?END:s;
 const today=clamp(ds(new Date()));
 let me=localStorage.getItem("gc_me"),tab="my",myDate=today,teamDate=today;
-let pend=null,profReady=false,pinErr="";let days={},profs={},db=null,ready=false;
+let bkRange="all",pend=null,profReady=false,pinErr="";let days={},profs={},db=null,ready=false;
 
 if(!CONFIG.projectId){
   $("#app").innerHTML='<div class="hero"><h1>Glow Club 🌸</h1></div><div class="banner">Almost there! Open <b>index.html</b> in a text editor and paste your Firebase config where it says <b>PASTE YOUR FIREBASE CONFIG HERE</b>.</div>';
@@ -76,12 +76,25 @@ async function allPhotos(){const s=await getDocs(collection(db,"photos"));return
 function csv(){const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
   const H=["Date","Name","Workout min","Water ml","Breakfast","Lunch","Dinner","Veg/fruit","Low sugar","No binge","Ate on time","Cheat meals","Notes","No negative talk","Gratitude","Limited social","Hobby","Sleep"];
   const y=v=>v?"Yes":"";
-  const rows=Object.values(days).sort((a,b)=>(a.date+a.who).localeCompare(b.date+b.who)).map(x=>{const m=x.meals||{},k=x.mind||{};
+  const rows=Object.values(days).filter(x=>inR(x.date)).sort((a,b)=>(a.date+a.who).localeCompare(b.date+b.who)).map(x=>{const m=x.meals||{},k=x.mind||{};
     return [x.date,x.who,x.mins||0,x.water||0,y(m.b),y(m.l),y(m.d),y(x.veg),y(x.sugar),y(x.nobinge),y(x.ontime),x.cheat||0,(x.notes||[]).join(" | "),y(k.selftalk),y(k.grat),y(k.social),y(k.hobby),y(k.sleep)].map(q).join(",")});
   return "\uFEFF"+[H.map(q).join(","),...rows].join("\n")}
 async function hashPin(n,p){const t=new TextEncoder().encode("glow:"+n+":"+p);if(crypto.subtle){const b=await crypto.subtle.digest("SHA-256",t);return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}let h=5381;for(const c of t)h=(h*33+c)>>>0;return"s"+h}
 function vPin(){const has=profs[me]?.pinHash;const inp=(i,ph)=>`<input type="password" id="${i}" inputmode="numeric" maxlength="4" placeholder="${ph}" style="text-align:center;font-size:22px;letter-spacing:8px;margin:6px 0">`;
   return head()+`<div class="card" style="text-align:center">${av(me)}<h2 style="margin:10px 0">${has?"Welcome back, "+me+" 💕":"Hi "+me+"! Create your PIN 🔒"}</h2><p class="sub">${has?"Enter your 4-digit PIN.":"Choose 4 digits only you will remember. It stops others from editing your day."}</p>${inp("pin","PIN")}${has?"":inp("pin2","repeat")}<div style="color:#d6336c;font-size:14px;min-height:20px">${pinErr}</div><div class="chips" style="justify-content:center"><button class="btn" data-a="pinok">Continue ✨</button><button class="btn lil" data-a="who">Not me</button></div></div>`}
+function loadX(){return window.ExcelJS?Promise.resolve():new Promise((ok,no)=>{const t=document.createElement("script");t.src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js";t.onload=ok;t.onerror=()=>no(new Error("Could not load the Excel tool. Check your internet and try again."));document.head.appendChild(t)})}
+async function xlsx(){await loadX();const p=(await allPhotos()).filter(z=>inR(z.date)),wb=new ExcelJS.Workbook(),y=v=>v?"Yes":"";
+  const w1=wb.addWorksheet("Daily log");
+  w1.addRow(["Date","Name","Workout min","Water ml","Breakfast","Lunch","Dinner","Veg/fruit","Low sugar","No binge","Ate on time","Cheat meals","Notes","No negative talk","Gratitude","Limited social","Hobby","Sleep","Photos"]);
+  Object.values(days).filter(x=>inR(x.date)).sort((a,b)=>(a.date+a.who).localeCompare(b.date+b.who)).forEach(x=>{const m=x.meals||{},k=x.mind||{};
+    w1.addRow([x.date,x.who,x.mins||0,x.water||0,y(m.b),y(m.l),y(m.d),y(x.veg),y(x.sugar),y(x.nobinge),y(x.ontime),x.cheat||0,(x.notes||[]).join(" | "),y(k.selftalk),y(k.grat),y(k.social),y(k.hobby),y(k.sleep),p.filter(z=>z.date===x.date&&z.who===x.who).length])});
+  w1.columns.forEach((c,i)=>c.width=i==12?60:14);
+  const w2=wb.addWorksheet("Photos");w2.addRow(["Date","Name","Photo"]);w2.columns=[{width:14},{width:14},{width:24}];
+  p.forEach((x,i)=>{w2.addRow([x.date,x.who]);w2.getRow(i+2).height=110;w2.getRow(i+2).alignment={vertical:"middle"};
+    w2.addImage(wb.addImage({base64:x.img,extension:"jpeg"}),{tl:{col:2.1,row:i+1.08},ext:{width:130,height:130}})});
+  [w1,w2].forEach(w=>{const h=w.getRow(1);h.font={bold:true,color:{argb:"FFFFFFFF"}};h.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFF27CA4"}};w.views=[{state:"frozen",ySplit:1}]});
+  return wb.xlsx.writeBuffer()}
+const inR=d=>{if(bkRange==="all")return true;const n={day:1,week:7,w2:14,month:30}[bkRange],c=pd(today);c.setDate(c.getDate()-(n-1));return d>=ds(c)};
 const id=(n,d)=>n+"_"+d;
 const get=(n,d)=>days[id(n,d)]||{};
 const tgt=n=>({mins:Math.max(10,+(profs[n]?.mins)||10),water:+(profs[n]?.water)||2500,habits:profs[n]?.habits||[]});
@@ -161,7 +174,8 @@ function vSet(){const t=tgt(me);
   ${[0,1,2].map(i=>`<input type="text" class="h" maxlength="30" value="${esc(t.habits[i]||"")}" placeholder="e.g. 10 min stretching" style="margin:6px 0">`).join("")}
   <div class="chips" style="margin-top:12px"><button class="btn" data-a="saveset">Save ✨</button><button class="btn lil" data-a="who">Switch person</button></div></div>
   ${me==="Navya"?`<div class="card"><h2>🔑 Reset a PIN</h2><p class="sub">For when someone forgets theirs.</p><div class="chips">${NAMES.filter(n=>n!==me).map(n=>`<button class="btn lil" data-a="rst" data-n="${n}">${n}</button>`).join("")}</div></div>`:""}
-  <div class="card"><h2>💾 Backup</h2><p class="sub">Save a copy of everything on your device.</p><div class="chips"><button class="btn" data-a="dlcsv">📊 Spreadsheet (Excel)</button><button class="btn" data-a="dlph">🖼️ Photo album</button><button class="btn lil" data-a="dljson">🗄️ Full backup</button></div></div>
+  <div class="card"><h2>💾 Backup</h2><p class="sub">Save a copy on your device. Pick how much to include (the Full backup always saves everything).</p>
+  <select id="bk" style="border:2px solid var(--rose2);border-radius:14px;padding:10px 12px;font:600 14px Quicksand;color:var(--ink);background:#fff;margin-bottom:10px;width:100%">${[["all","Everything so far"],["day","Today only"],["week","Last 7 days"],["w2","Last 14 days"],["month","Last 30 days"]].map(([v,l])=>`<option value="${v}" ${bkRange==v?"selected":""}>${l}</option>`).join("")}</select><div class="chips"><button class="btn" data-a="dlxls">📊 Excel with photos</button><button class="btn" data-a="dlph">🖼️ Photo album</button><button class="btn lil" data-a="dljson">🗄️ Full backup</button></div></div>
   <div class="card"><h2>📜 Our rules</h2><div class="sub" style="line-height:1.7">🏃 10+ min daily · 150+ min weekly · active rest days<br>🥗 3 balanced meals · never skip · veggies/fruit · 2.5 L water · less sugar & processed · no binge · regular timings<br>💌 Share a pic or message after every workout & meal<br>🍰 ${CHEATS} cheat meals in 3 months. Say when you take one!<br>🌙 Optional: kind self-talk, gratitude, less scrolling, hobbies, sleep</div></div>`;
 }
 
@@ -186,9 +200,10 @@ document.addEventListener("click",async e=>{
   else if(a=="savph"){b.disabled=true;b.textContent="Saving…";await addDoc(collection(db,"photos"),{who:me,date:pend.date,img:pend.img,ts:Date.now()});pend=null;render()}
   else if(a=="cancph"){pend=null;render()}
   else if(a=="delph"){if(confirm("Delete this photo?"))await deleteDoc(doc(db,"photos",b.dataset.i))}
+  else if(a=="dlxls"){b.textContent="Preparing…";try{dl("glow-club-"+stamp()+".xlsx",await xlsx(),"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}catch(err){alert(err.message)}b.textContent="📊 Excel with photos"}
   else if(a=="dlcsv")dl("glow-club-"+stamp()+".csv",csv(),"text/csv");
   else if(a=="dljson"){b.textContent="Preparing…";const p=await allPhotos();dl("glow-club-backup-"+stamp()+".json",JSON.stringify({exported:new Date().toISOString(),days,profiles:profs,photos:p}),"application/json");b.textContent="🗄️ Full backup"}
-  else if(a=="dlph"){b.textContent="Preparing…";const p=await allPhotos();let cur="";const body=p.map(x=>{let h="";if(x.date!==cur){cur=x.date;h=`<h2>${x.date}</h2>`}return h+`<figure><img src="${x.img}"><figcaption>${esc(x.who)}</figcaption></figure>`}).join("");
+  else if(a=="dlph"){b.textContent="Preparing…";const p=(await allPhotos()).filter(z=>inR(z.date));let cur="";const body=p.map(x=>{let h="";if(x.date!==cur){cur=x.date;h=`<h2>${x.date}</h2>`}return h+`<figure><img src="${x.img}"><figcaption>${esc(x.who)}</figcaption></figure>`}).join("");
     dl("glow-club-photos-"+stamp()+".html",`<!DOCTYPE html><meta charset="utf-8"><title>Glow Club photos</title><style>body{font-family:sans-serif;background:#fff5f8;padding:16px}figure{display:inline-block;margin:8px;text-align:center}img{width:240px;height:240px;object-fit:cover;border-radius:12px}h2{color:#f27ca4}</style><h1>Glow Club photos 🌸</h1>${body||"<p>No photos yet.</p>"}`,"text/html");b.textContent="🖼️ Photo album"}
   else if(a=="who"){me=null;pinErr="";localStorage.removeItem("gc_me");localStorage.removeItem("gc_ok");render()}
   else if(a=="pinok"){const p=$("#pin").value,has=profs[me]?.pinHash;pinErr="";
@@ -210,6 +225,7 @@ document.addEventListener("click",async e=>{
   }catch(err){alert("Couldn't save: "+err.message)}
 });
 document.addEventListener("change",async e=>{
+  if(e.target.id=="bk")bkRange=e.target.value;
   if(e.target.id=="ph"){const f=e.target.files[0];e.target.value="";if(!f)return;
     try{pend={img:await shrink(f),date:myDate};render()}catch(err){alert("Couldn't read that photo: "+err.message)}}
   if(e.target.id=="myd"){myDate=clamp(e.target.value||today);render()}
